@@ -1,0 +1,125 @@
+{
+  "tool": "dpdp-ai-scanner",
+  "scan_root": "../examples/sample_app.py",
+  "generated_at": "2026-08-05T07:05:20.330100+00:00",
+  "summary": {
+    "total_ai_call_sites": 4,
+    "high_risk": 2,
+    "medium_risk": 1,
+    "low_risk": 1
+  },
+  "findings": [
+    {
+      "file": "../examples/sample_app.py",
+      "line": 18,
+      "vendor": "openai",
+      "matched_signature": "openai.ChatCompletion.create",
+      "call_source": "openai.ChatCompletion.create(model='gpt-4', messages=[{'role': 'user', 'content': prompt_text}])",
+      "payload_args": {
+        "messages": "[{'role': 'user', 'content': prompt_text}]"
+      },
+      "function_scope": "summarize_support_ticket",
+      "risk_level": "HIGH",
+      "dataflow_reasons": [
+        "Payload arg 'messages' traces to `prompt_text = f\"Customer: {customer_email}\\nTicket: {ticket_body}\"`, PII-flavored"
+      ],
+      "obligations": [
+        {
+          "id": "DPDP-S8-CONSENT",
+          "title": "Section 8 \u2014 Data Fiduciary obligations / legal basis for processing",
+          "description": "Personal data appears to be transmitted to a third-party AI processor. Confirm a valid legal basis exists: either informed consent under Section 6, or one of the legitimate-use exemptions under Section 7.\n"
+        },
+        {
+          "id": "DPDP-S16-TRANSFER",
+          "title": "Section 16 \u2014 Cross-border data transfer",
+          "description": "Most AI vendor APIs process data outside India. Confirm the destination is not a restricted jurisdiction and that transfer conditions are met.\n"
+        },
+        {
+          "id": "DPDP-PROCESSOR-DPA",
+          "title": "Data Processor Agreement",
+          "description": "Confirm a data processing agreement is on file with this AI vendor, defining purpose limitation, retention, and deletion obligations for the data being sent.\n"
+        }
+      ],
+      "remediation": "Verify the legal basis for this call, confirm a DPA exists with the vendor, and document the retention/deletion terms before this code path ships to production with real user data.\n"
+    },
+    {
+      "file": "../examples/sample_app.py",
+      "line": 29,
+      "vendor": "anthropic",
+      "matched_signature": "messages.create",
+      "call_source": "client.messages.create(model='claude-3-opus-20240229', messages=[{'role': 'user', 'content': user_message}])",
+      "payload_args": {
+        "messages": "[{'role': 'user', 'content': user_message}]"
+      },
+      "function_scope": "handle_chat_request",
+      "risk_level": "HIGH",
+      "dataflow_reasons": [
+        "Payload arg 'messages' traces to `user_message = request.json.get(\"message\")`, incoming data source"
+      ],
+      "obligations": [
+        {
+          "id": "DPDP-S8-CONSENT",
+          "title": "Section 8 \u2014 Data Fiduciary obligations / legal basis for processing",
+          "description": "Personal data appears to be transmitted to a third-party AI processor. Confirm a valid legal basis exists: either informed consent under Section 6, or one of the legitimate-use exemptions under Section 7.\n"
+        },
+        {
+          "id": "DPDP-S16-TRANSFER",
+          "title": "Section 16 \u2014 Cross-border data transfer",
+          "description": "Most AI vendor APIs process data outside India. Confirm the destination is not a restricted jurisdiction and that transfer conditions are met.\n"
+        },
+        {
+          "id": "DPDP-PROCESSOR-DPA",
+          "title": "Data Processor Agreement",
+          "description": "Confirm a data processing agreement is on file with this AI vendor, defining purpose limitation, retention, and deletion obligations for the data being sent.\n"
+        }
+      ],
+      "remediation": "Verify the legal basis for this call, confirm a DPA exists with the vendor, and document the retention/deletion terms before this code path ships to production with real user data.\n"
+    },
+    {
+      "file": "../examples/sample_app.py",
+      "line": 38,
+      "vendor": "openai",
+      "matched_signature": "openai.ChatCompletion.create",
+      "call_source": "openai.ChatCompletion.create(model='gpt-4', messages=[{'role': 'user', 'content': data}])",
+      "payload_args": {
+        "messages": "[{'role': 'user', 'content': data}]"
+      },
+      "function_scope": "generate_report_summary",
+      "risk_level": "MEDIUM",
+      "dataflow_reasons": [
+        "Payload arg 'messages' uses a generic variable name (`data`), manual review recommended"
+      ],
+      "obligations": [
+        {
+          "id": "DPDP-REVIEW-NEEDED",
+          "title": "Manual review recommended",
+          "description": "The payload naming is too generic to classify automatically. A human reviewer should confirm whether personal data is present.\n"
+        }
+      ],
+      "remediation": "Manually inspect this call site to confirm whether personal data is included in the payload before assuming it is clear.\n"
+    },
+    {
+      "file": "../examples/sample_app.py",
+      "line": 48,
+      "vendor": "openai",
+      "matched_signature": "openai.ChatCompletion.create",
+      "call_source": "openai.ChatCompletion.create(model='gpt-4', messages=[{'role': 'system', 'content': system_prompt}])",
+      "payload_args": {
+        "messages": "[{'role': 'system', 'content': system_prompt}]"
+      },
+      "function_scope": "get_style_suggestions",
+      "risk_level": "LOW",
+      "dataflow_reasons": [
+        "No PII-flavored naming or known incoming-data source detected in payload expression(s)"
+      ],
+      "obligations": [
+        {
+          "id": "DPDP-BASELINE-AWARENESS",
+          "title": "Baseline third-party transfer awareness",
+          "description": "No personal-data indicators were detected, but any call to a third-party AI vendor is still a data transfer worth logging in your AI system inventory for audit-readiness.\n"
+        }
+      ],
+      "remediation": "No immediate action required. Log this vendor in your AI system inventory for completeness.\n"
+    }
+  ]
+}
