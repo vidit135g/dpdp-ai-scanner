@@ -1,0 +1,236 @@
+@import "tailwindcss";
+
+:root {
+  --canvas: #0a0a0a;
+  --surface: #141414;
+  --surface-hover: #1e1e1e;
+  --border: #2a2a2a;
+  --border-strong: #3d3d3d;
+  --ink: #ffffff;
+  --ink-muted: #a8a8a8;
+  --ink-faint: #757575;
+
+  --nav-bg: #ffffff;
+  --nav-ink: #0a0a0a;
+  --nav-border: #e5e5e5;
+
+  --brand: #ec0000;
+  --brand-strong: #b80000;
+  --brand-soft: rgba(236, 0, 0, 0.14);
+  --brand-ink: #ffffff;
+
+  --risk-high: #ff3b30;
+  --risk-high-soft: rgba(255, 59, 48, 0.16);
+  --risk-high-ink: #ff8078;
+  --risk-medium: #ff9f0a;
+  --risk-medium-soft: rgba(255, 159, 10, 0.16);
+  --risk-medium-ink: #ffbd5c;
+  --risk-low: #30d158;
+  --risk-low-soft: rgba(48, 209, 88, 0.16);
+  --risk-low-ink: #6fe08c;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px -8px rgba(236, 0, 0, 0.25), 0 2px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-ink: var(--nav-ink);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-interactive {
+    transition: box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--brand);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 3px;
+    background: var(--brand-soft);
+    color: var(--risk-high-ink);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    white-space: nowrap;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary {
+    background: var(--brand);
+    color: var(--brand-ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--brand-strong);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1.5px solid var(--border-strong);
+    color: var(--ink);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--ink);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--surface-hover);
+  }
+
+  .prose-guide {
+    color: var(--ink);
+    max-width: 42rem;
+  }
+  .prose-guide h2 {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .prose-guide p {
+    color: var(--ink-muted);
+    line-height: 1.75;
+    margin-bottom: 1rem;
+    font-size: 0.9375rem;
+  }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fadeSlideUp 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chevronPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1) translateX(0); }
+  50% { opacity: 0.85; transform: scale(1.04) translateX(-1%); }
+}
+
+@keyframes chevronDrift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2%); }
+}
+
+.chevron-glow {
+  animation: chevronPulse 6s ease-in-out infinite;
+}
+.chevron-back {
+  animation: chevronDrift 9s ease-in-out infinite;
+}
+
+@keyframes scanSweep {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+.scan-line {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(236, 0, 0, 0.06) 35%,
+    rgba(236, 0, 0, 0.35) 50%,
+    rgba(236, 0, 0, 0.06) 65%,
+    transparent
+  );
+  box-shadow: 0 0 40px 10px rgba(236, 0, 0, 0.15);
+  animation: scanSweep 5s linear infinite;
+}
+.scan-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(236, 0, 0, 0.8);
+  box-shadow: 0 0 12px 2px rgba(236, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron-glow,
+  .chevron-back,
+  .scan-line {
+    animation: none;
+  }
+  .animate-in {
+    animation: none;
+  }
+}

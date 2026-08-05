@@ -1,0 +1,108 @@
+name: "DPDP AI Exposure Scan"
+description: >
+  Scans a Python codebase for AI/LLM API calls that may transmit personal
+  data to a third-party AI processor, and flags the DPDP Act 2023
+  obligations each finding triggers. Triage aid, not legal advice.
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  path:
+    description: "Path (relative to repo root) to scan."
+    required: false
+    default: "."
+  fail-on:
+    description: "Risk level that fails the check: high, medium, or none."
+    required: false
+    default: "high"
+  comment-on-pr:
+    description: "Post/update a PR comment with the findings when running on a pull_request event."
+    required: false
+    default: "true"
+  github-token:
+    description: "Token used to read/post the PR comment. Defaults to the workflow's GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  high-risk-count:
+    description: "Number of HIGH risk findings."
+    value: ${{ steps.scan.outputs.high_risk }}
+  medium-risk-count:
+    description: "Number of MEDIUM risk findings."
+    value: ${{ steps.scan.outputs.medium_risk }}
+  total-findings:
+    description: "Total AI/LLM call sites found."
+    value: ${{ steps.scan.outputs.total }}
+  report-json:
+    description: "Path to the generated JSON report."
+    value: ${{ steps.scan.outputs.json_path }}
+  report-markdown:
+    description: "Path to the generated Markdown report."
+    value: ${{ steps.scan.outputs.md_path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dpdp-ai-scanner dependencies
+      shell: bash
+      run: pip install -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Run DPDP scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        python "${{ github.action_path }}/src/cli.py" "${{ inputs.path }}" \
+          -o dpdp-scan-report \
+          --fail-on "${{ inputs.fail-on }}"
+        SCAN_EXIT_CODE=$?
+        set -e
+
+        {
+          echo "exit_code=$SCAN_EXIT_CODE"
+          echo "json_path=dpdp-scan-report.json"
+          echo "md_path=dpdp-scan-report.md"
+        } >> "$GITHUB_OUTPUT"
+
+        if [ -f dpdp-scan-report.json ]; then
+          python -c "import json; s = json.load(open('dpdp-scan-report.json'))['summary']; print(f\"total={s['total_ai_call_sites']}\"); print(f\"high_risk={s['high_risk']}\"); print(f\"medium_risk={s['medium_risk']}\")" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Post PR comment with findings
+      if: >
+        inputs.comment-on-pr == 'true' &&
+        github.event_name == 'pull_request' &&
+        hashFiles('dpdp-scan-report.md') != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        MARKER="<!-- dpdp-ai-scanner-report -->"
+        BODY_FILE="$(mktemp)"
+        echo "$MARKER" > "$BODY_FILE"
+        cat dpdp-scan-report.md >> "$BODY_FILE"
+
+        EXISTING_ID=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+          --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -n1)
+
+        if [ -n "$EXISTING_ID" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING_ID" -f body=@"$BODY_FILE" > /dev/null
+        else
+          gh pr comment "$PR_NUMBER" --body-file "$BODY_FILE"
+        fi
+
+    - name: Fail the check if the risk threshold was exceeded
+      if: steps.scan.outputs.exit_code != '0'
+      shell: bash
+      run: |
+        echo "::error::DPDP scan found findings at or above the '${{ inputs.fail-on }}' risk threshold. See the scan output or PR comment for details."
+        exit 1

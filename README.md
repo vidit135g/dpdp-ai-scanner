@@ -74,6 +74,61 @@ python3 cli.py ../examples/sample_app.py -o ../examples/sample-repo-report
 See [`examples/sample-repo-report.md`](examples/sample-repo-report.md) for
 sample output, four call sites, two flagged HIGH risk, one MEDIUM, one LOW.
 
+### CI exit codes
+
+By default the CLI always exits `0`. Pass `--fail-on high` (or `medium`) to
+make it exit non-zero when findings at or above that risk level are
+present, for use as a CI gate:
+
+```bash
+python3 cli.py /path/to/your/project -o my-scan-report --fail-on high
+```
+
+## Use as a GitHub Action
+
+This repo is itself a reusable composite Action. Reference it directly by
+commit SHA or branch (no Marketplace listing yet):
+
+```yaml
+name: DPDP AI Exposure Scan
+
+on:
+  pull_request:
+    paths: ["**/*.py"]
+
+permissions:
+  contents: read
+  pull-requests: write   # required to post/update the findings comment
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vidit135g/dpdp-ai-scanner@main
+        with:
+          path: .              # default: "."
+          fail-on: high         # default: "high" — one of high | medium | none
+          comment-on-pr: true   # default: "true"
+```
+
+The Action installs its own dependencies, runs the scan, posts (or updates,
+on re-runs) a single PR comment with the Markdown report, and fails the
+check if findings meet the `fail-on` threshold. See
+[`action.yml`](action.yml) for all inputs/outputs and
+[`.github/workflows/dpdp-scan.yml`](.github/workflows/dpdp-scan.yml) for
+this repo's own dogfooding workflow (scanned against `examples/`, with
+`fail-on: none` since the example app is deliberately built to contain a
+HIGH risk finding).
+
+## Dashboard
+
+A web dashboard is available for browsing scan history and findings instead
+of reading raw JSON/Markdown reports — sign in with GitHub, connect a repo,
+and results from the Action land there automatically. See
+[`dashboard/README.md`](dashboard/README.md) for screenshots, the connect
+flow, and local setup.
+
 ## Running tests
 
 ```bash
@@ -83,7 +138,7 @@ python3 -m pytest tests/ -v
 ## Roadmap
 
 - [ ] JavaScript/TypeScript support via `tree-sitter`
-- [ ] GitHub Action packaging for CI integration on every PR
+- [x] GitHub Action packaging for CI integration on every PR
 - [ ] Optional secondary tagging against ISO/IEC 42001 and NIST AI RMF
       controls, layered on top of the DPDP-first findings
 - [ ] Two-hop data-flow tracing across function boundaries within a file

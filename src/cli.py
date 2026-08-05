@@ -53,6 +53,12 @@ def main():
     )
     parser.add_argument("path", help="Path to a Python file or directory to scan")
     parser.add_argument("-o", "--output", default="dpdp-scan-report", help="Output file prefix (default: dpdp-scan-report)")
+    parser.add_argument(
+        "--fail-on",
+        choices=["high", "medium", "none"],
+        default="none",
+        help="Exit with a non-zero status if findings at or above this risk level are present (for CI use). Default: none.",
+    )
     args = parser.parse_args()
 
     target = Path(args.path)
@@ -82,6 +88,11 @@ def main():
     print(f"  MEDIUM risk: {s['medium_risk']}")
     print(f"  LOW risk:    {s['low_risk']}")
     print(f"\nReports written to:\n  {json_path}\n  {md_path}")
+
+    if args.fail_on == "high" and s["high_risk"] > 0:
+        sys.exit(1)
+    if args.fail_on == "medium" and (s["high_risk"] > 0 or s["medium_risk"] > 0):
+        sys.exit(1)
 
 
 if __name__ == "__main__":
