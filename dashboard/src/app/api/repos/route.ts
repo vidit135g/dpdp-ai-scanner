@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { generateApiKey, hashApiKey } from "@/lib/apiKey";
-import { userCanAccessRepo } from "@/lib/github";
+import { getManageableRepo } from "@/lib/github";
 
 const connectRepoSchema = z.object({
   githubRepoId: z.number().int(),
@@ -30,9 +30,12 @@ export async function POST(req: NextRequest) {
 
   // Re-verify against GitHub directly rather than trusting the client's
   // claim — the repo list shown in the UI could theoretically be stale.
-  const canAccess = await userCanAccessRepo(session.user.id, owner, name);
-  if (!canAccess) {
-    return NextResponse.json({ error: "You do not have access to this repo" }, { status: 403 });
+  const githubRepo = await getManageableRepo(session.user.id, owner, name);
+  if (!githubRepo) {
+    return NextResponse.json({ error: "Write access to this repo is required" }, { status: 403 });
+  }
+  if (githubRepo.id !== githubRepoId) {
+    return NextResponse.json({ error: "Repository identity does not match GitHub" }, { status: 400 });
   }
 
   const existing = await prisma.repo.findUnique({ where: { owner_name: { owner, name } } });
@@ -48,9 +51,9 @@ export async function POST(req: NextRequest) {
 
   const repo = await prisma.repo.create({
     data: {
-      githubRepoId: String(githubRepoId),
-      owner,
-      name,
+      githubRepoId: String(githubRepo.id),
+      owner: githubRepo.owner.login,
+      name: githubRepo.name,
       connectedById: session.user.id,
       apiKey: {
         create: { keyHash: hash, keySalt: salt, keyPrefix: prefix },
