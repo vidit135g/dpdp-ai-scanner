@@ -14,23 +14,37 @@ export async function getUserAccessToken(userId: string): Promise<string | null>
  * cached permission — so access reflects the user's *current* GitHub
  * permissions, including revocations, in real time.
  */
+interface GitHubRepoResponse {
+  id: number;
+  name: string;
+  private: boolean;
+  owner: { login: string };
+  permissions?: { pull?: boolean; push?: boolean; admin?: boolean };
+}
+
+async function fetchGitHubRepo(userId: string, owner: string, name: string): Promise<GitHubRepoResponse | null> {
+  const token = await getUserAccessToken(userId);
+  if (!token) return null;
+  const res = await fetch(`https://api.github.com/repos/${owner}/${name}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+  });
+  return res.ok ? (await res.json()) as GitHubRepoResponse : null;
+}
+
 export async function userCanAccessRepo(
   userId: string,
   owner: string,
   name: string,
+  expectedRepoId?: string,
 ): Promise<boolean> {
-  const token = await getUserAccessToken(userId);
-  if (!token) return false;
+  const repo = await fetchGitHubRepo(userId, owner, name);
+  return Boolean(repo && (!expectedRepoId || String(repo.id) === expectedRepoId));
+}
 
-  const res = await fetch(`https://api.github.com/repos/${owner}/${name}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-
-  return res.ok;
+export async function getManageableRepo(userId: string, owner: string, name: string) {
+  const repo = await fetchGitHubRepo(userId, owner, name);
+  if (!repo || !(repo.permissions?.push || repo.permissions?.admin)) return null;
+  return repo;
 }
 
 export interface GitHubRepoSummary {
@@ -38,6 +52,7 @@ export interface GitHubRepoSummary {
   owner: string;
   name: string;
   private: boolean;
+  canManage: boolean;
 }
 
 /** Lists repos the signed-in user has access to, for the "connect a repo" picker. */
@@ -61,16 +76,12 @@ export async function listAccessibleRepos(userId: string): Promise<GitHubRepoSum
     );
     if (!res.ok) break;
 
-    const batch = (await res.json()) as Array<{
-      id: number;
-      name: string;
-      private: boolean;
-      owner: { login: string };
-    }>;
+    const batch = (await res.json()) as GitHubRepoResponse[];
     if (batch.length === 0) break;
 
     repos.push(
-      ...batch.map((r) => ({ id: r.id, owner: r.owner.login, name: r.name, private: r.private })),
+      ...batch.map((r) => ({ id: r.id, owner: r.owner.login, name: r.name, private: r.private,
+        canManage: Boolean(r.permissions?.push || r.permissions?.admin) })),
     );
 
     if (batch.length < 100) break;
